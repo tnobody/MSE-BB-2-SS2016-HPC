@@ -11,6 +11,8 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.stream.IntStream;
 
 import static org.jocl.CL.clEnqueueNDRangeKernel;
 import static org.jocl.CL.clEnqueueReadImage;
@@ -50,6 +52,8 @@ public class Assignment1 {
                     "    float sa = sin(angle);" + "\n" +
                     "    int inX = (int)(cx+ca*dx-sa*dy);" + "\n" +
                     "    int inY = (int)(cy+sa*dx+ca*dy);" + "\n" +
+                    "    inX = (int)(((cos(angle)*dx) - (sin(angle)*dy)) + cx);" + "\n" +
+                    "    inY = (int)(((sin(angle)*dx) + (cos(angle)*dy)) + cy);" + "\n" +
                     "    int2 posIn = {inX, inY};" + "\n" +
                     "    int2 posOut = {gidX, gidY};" + "\n" +
                     "    uint4 pixel = read_imageui(sourceImage, samplerIn, posIn);" + "\n" +
@@ -65,20 +69,31 @@ public class Assignment1 {
     }
 
     public Assignment1() {
-        BufferedImage image = createBufferedImage("homer.png");
+        BufferedImage image = createBufferedImage("icelands_ring_road-wide.jpg");
         try {
-            openCLContext = new OpenCLContext(programSource);
-            cl_mem[] iOImages = openCLContext.getImageMem(image);
-            inputImageMem = iOImages[0];
-            outputImageMem = iOImages[1];
-            BufferedImage rotatedImage = rotateImage(90, image.getWidth(), image.getHeight());
-            ImageIO.write(rotatedImage, "png", new File(getClass().getResource("").getPath() + "rotated.png"));
-        } catch (InvalidArgumentException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+            try {
+                openCLContext = new OpenCLContext(programSource);
+            } catch (InvalidArgumentException e) {
+                e.printStackTrace();
+            }
+            IntStream.range(0,36).map(i -> i*10).forEach( i -> {
+
+                cl_mem[] iOImages = openCLContext.getImageMem(image);
+                inputImageMem = iOImages[0];
+                outputImageMem = iOImages[1];
+
+                BufferedImage rotatedImage = rotateImage((float) Math.toRadians(i), image.getWidth(), image.getHeight());
+                try {
+                    ImageIO.write(rotatedImage, "jpg", new File(getClass().getResource("").getPath() + "/rotated/rotated_" + i + ".jpg"));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            //BufferedImage rotatedImage = rotateImage(100, image.getWidth(), image.getHeight());
+            //ImageIO.write(rotatedImage, "png", new File(getClass().getResource("").getPath() + "rotated.png"));
+        } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     public BufferedImage rotateImage(float angle, int imageSizeX, int imageSizeY) {
@@ -86,6 +101,7 @@ public class Assignment1 {
         long globalWorkSize[] = new long[2];
         globalWorkSize[0] = imageSizeX;
         globalWorkSize[1] = imageSizeY;
+
         clSetKernelArg(openCLContext.getKernel(), 0, Sizeof.cl_mem, Pointer.to(inputImageMem));
         clSetKernelArg(openCLContext.getKernel(), 1, Sizeof.cl_mem, Pointer.to(outputImageMem));
         clSetKernelArg(openCLContext.getKernel(), 2, Sizeof.cl_float, Pointer.to(new float[]{angle}));
