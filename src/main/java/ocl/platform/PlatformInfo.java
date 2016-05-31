@@ -1,4 +1,4 @@
-package ocl;
+package ocl.platform;
 
 import org.jocl.cl_platform_id;
 
@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.jocl.CL.clGetPlatformIDs;
 
@@ -14,16 +15,16 @@ import static org.jocl.CL.clGetPlatformIDs;
  */
 public class PlatformInfo {
 
-    private List<cl_platform_id> platformIds = null;
+    private Stream<Platform> platformIds = null;
 
-    public List<cl_platform_id> getPlatformIds() {
+    public Stream<Platform> getPlatforms() {
         if(platformIds == null) {
             int platformCount = getNumPlatforms();
             cl_platform_id[] platformIdsBag = new cl_platform_id[platformCount];
             clGetPlatformIDs(platformCount, platformIdsBag, null);
             platformIds = Arrays
                     .stream(platformIdsBag)
-                    .collect(Collectors.toList());
+                    .map(Platform::new);
         }
         return platformIds;
     }

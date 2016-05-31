@@ -1,5 +1,6 @@
-package ocl;
+package ocl.platform;
 
+import ocl.platform.device.DeviceInfo;
 import org.jocl.cl_platform_id;
 
 /**
@@ -21,5 +22,10 @@ public class Platform {
         if(deviceInfo == null) {
             deviceInfo = new DeviceInfo(this);
         } return deviceInfo;
+    }
+
+    public Context createContext() {
+        Context context = new Context();
+        return context.platform(this);
     }
 }
