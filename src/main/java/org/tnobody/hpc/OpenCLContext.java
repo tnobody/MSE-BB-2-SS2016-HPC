@@ -1,6 +1,5 @@
 package org.tnobody.hpc;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.jocl.*;
 
 import java.awt.image.BufferedImage;
@@ -19,7 +18,7 @@ public class OpenCLContext {
     private final cl_command_queue commandQueue;
     private final cl_kernel kernel;
 
-    public OpenCLContext(String programSource) throws InvalidArgumentException {
+    public OpenCLContext(String programSource) throws Exception {
         final int platformIndex = 0;
         final long deviceType = CL_DEVICE_TYPE_ALL;
         final int deviceIndex = 0;
@@ -63,7 +62,8 @@ public class OpenCLContext {
         System.out.println("Images supported: "+(imageSupport[0]==1));
         if (imageSupport[0]==0)
         {
-            throw new InvalidArgumentException(new String[]{"Images are not supported"});
+            //throw new Exception(new String[]{"Images are not supported"});
+            throw new Exception("Images are not supported");
         }
 
         // Create a command-queue

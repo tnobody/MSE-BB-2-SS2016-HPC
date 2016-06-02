@@ -1,6 +1,5 @@
 package org.tnobody.hpc;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.jocl.Pointer;
 import org.jocl.Sizeof;
 import org.jocl.cl_mem;
@@ -69,11 +68,11 @@ public class Assignment1 {
     }
 
     public Assignment1() {
-        BufferedImage image = createBufferedImage("icelands_ring_road-wide.jpg");
+        BufferedImage image = createBufferedImage("homer.png");
         try {
             try {
                 openCLContext = new OpenCLContext(programSource);
-            } catch (InvalidArgumentException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             IntStream.range(0,36).map(i -> i*10).forEach( i -> {
