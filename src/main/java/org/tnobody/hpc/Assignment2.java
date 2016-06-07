@@ -86,13 +86,13 @@ public class Assignment2 {
         // Allocate the memory objects for the input- and output data
         getClMemoryBuffers(context);
 
-        executeScanKernel(commandQueue, scanKernel, N, SUM);
+        executeScanKernel(commandQueue, scanKernel, N, inputBuffer, outputBuffer, sumBuffer);
         debug("After first", commandQueue);
         if (getWorkGroupCount() > 1) {
-            executeScanKernel(commandQueue, scanKernel, getWorkGroupCount(), SCANNED_SUM);
+            executeScanKernel(commandQueue, scanKernel, getWorkGroupCount(), sumBuffer, sumBuffer, scanSumBuffer);
             debug("After second ", commandQueue);
             if (getWorkGroupCount() > WORKITEM_SIZE) {
-                executeScanKernel(commandQueue, scanKernel,getWorkGroupCount(), USE_TEMP);
+                executeScanKernel(commandQueue, scanKernel,getWorkGroupCount(), scanSumBuffer, scanSumBuffer, null);
                 debug("After third ", commandQueue);
             }
             clSetKernelArg(addKernel, 0, Sizeof.cl_mem, Pointer.to(inputBuffer)); // input array
@@ -112,15 +112,15 @@ public class Assignment2 {
         System.out.println("Output: " + text + Arrays.toString(output));
     }
 
-    private void executeScanKernel(cl_command_queue commandQueue, cl_kernel kernel, long workGroupCount, int useSums) {
+    private void executeScanKernel(cl_command_queue commandQueue, cl_kernel kernel, long workGroupCount, cl_mem inputBuffer, cl_mem outputBuffer, cl_mem sumBuffer) {
         clSetKernelArg(kernel, 0, Sizeof.cl_mem, Pointer.to(inputBuffer));
         clSetKernelArg(kernel, 1, Sizeof.cl_mem, Pointer.to(outputBuffer));
         clSetKernelArg(kernel, 2, Sizeof.cl_int, Pointer.to(new int[]{(int) workGroupCount}));
         clSetKernelArg(kernel, 3, WORKITEM_SIZE * 2 * Sizeof.cl_int, null);
-        if (useSums == USE_TEMP) {
+        if (sumBuffer == null) {
             clSetKernelArg(kernel, 4, Sizeof.cl_mem, Pointer.to(new cl_mem[getWorkGroupCount() + 1]));
         } else {
-            clSetKernelArg(kernel, 4, Sizeof.cl_mem, Pointer.to(useSums == SCANNED_SUM ? scanSumBuffer : sumBuffer));
+            clSetKernelArg(kernel, 4, Sizeof.cl_mem, Pointer.to(sumBuffer));
         }
         // zusätzlicher output array, der das letzte element jedes scans speichert => pro workgroup wieder aufsummiert
         // dafür nochmal einen eigenen kernel
