@@ -2,19 +2,15 @@ package org.tnobody.hpc;
 
 import static org.jocl.CL.*;
 
-import com.sun.deploy.util.ArrayUtil;
 import org.apache.commons.io.FileUtils;
 import org.jocl.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
-import java.util.stream.Stream;
 
 
 public class Assignment2 {
@@ -22,11 +18,11 @@ public class Assignment2 {
     private static final int INPUT_DATA = 0;
     private static final int OUTPUT_DATA = 1;
     private static final int TEMPORARY_DATA = 2;
-
-    // Data Init
-    private static final long N = 1024;// muss power of two sein
     public static final int SUM = 3;
     public static final int SCANNED_SUM = 4;
+
+    // Data Init
+    private static final long N = 8;// muss power of two sein
     private static final int USE_TEMP = -1;
     //long[] input = LongStream.range(0, N).map(l -> ThreadLocalRandom.current().nextInt(0, 10)).toArray();
     long[] input = LongStream.range(0, N).map(l -> 1).toArray();
@@ -46,6 +42,11 @@ public class Assignment2 {
     final String KERNEL_FILE = "/scan_kernel.c";
     final String SCAN_METHOD = "scan_work_efficient";
     final String ADD_METHOD = "add";
+    private cl_mem inputBuffer;
+    private cl_mem outputBuffer;
+    private cl_mem tempBuffer;
+    private cl_mem sumBuffer;
+    private cl_mem scanSumBuffer;
 
     private Assignment2() throws IOException {
         programSource = FileUtils.readLines(new File(Assignment2.class.getResource(".").getPath() + KERNEL_FILE)).stream().collect(Collectors.joining(System.getProperty("line.separator")));
@@ -83,50 +84,43 @@ public class Assignment2 {
 
         // Set the arguments for the kernel
         // Allocate the memory objects for the input- and output data
-        Pointer ptInput = Pointer.to(input);
-        Pointer ptOutput = Pointer.to(output);
-        Pointer ptSums = Pointer.to(sums);
+        getClMemoryBuffers(context);
 
-        cl_mem[] memObjects = getClMemoryBuffers(context);
-
-
-        executeScanKernel(commandQueue, scanKernel, memObjects, N, SUM);
-        debug("After first", commandQueue, memObjects);
+        executeScanKernel(commandQueue, scanKernel, N, SUM);
+        debug("After first", commandQueue);
         if (getWorkGroupCount() > 1) {
-            executeScanKernel(commandQueue, scanKernel, memObjects, getWorkGroupCount(), SCANNED_SUM);
-            debug("After second ", commandQueue, memObjects);
+            executeScanKernel(commandQueue, scanKernel, getWorkGroupCount(), SCANNED_SUM);
+            debug("After second ", commandQueue);
             if (getWorkGroupCount() > WORKITEM_SIZE) {
-                executeScanKernel(commandQueue, scanKernel, memObjects,getWorkGroupCount(), USE_TEMP);
-                debug("After third ", commandQueue, memObjects);
-
-                clSetKernelArg(addKernel, 0, Sizeof.cl_mem, Pointer.to(memObjects[INPUT_DATA])); // input array
-                clSetKernelArg(addKernel, 1, Sizeof.cl_mem, Pointer.to(memObjects[OUTPUT_DATA])); // output array
-                clEnqueueNDRangeKernel(commandQueue, addKernel, 1, null, new long[]{N}, new long[]{WORKITEM_SIZE}, 0, null, null);
-                debug("After add  ", commandQueue, memObjects);
+                executeScanKernel(commandQueue, scanKernel,getWorkGroupCount(), USE_TEMP);
+                debug("After third ", commandQueue);
             }
+            clSetKernelArg(addKernel, 0, Sizeof.cl_mem, Pointer.to(inputBuffer)); // input array
+            clSetKernelArg(addKernel, 1, Sizeof.cl_mem, Pointer.to(outputBuffer)); // output array
+            clEnqueueNDRangeKernel(commandQueue, addKernel, 1, null, new long[]{N}, new long[]{WORKITEM_SIZE}, 0, null, null);
+            debug("After add  ", commandQueue);
         }
 
-
+        debug("After all", commandQueue);
         // Read the output data
-        clEnqueueReadBuffer(commandQueue, memObjects[OUTPUT_DATA], CL_TRUE, 0, N * Sizeof.cl_long, ptOutput, 0, null, null);
-        clean(context, commandQueue, program, scanKernel, memObjects);
+        clean(context, commandQueue, program, scanKernel);
     }
 
-    private void debug(String text, cl_command_queue commandQueue, cl_mem[] memObjects) {
-        clEnqueueReadBuffer(commandQueue, memObjects[OUTPUT_DATA], CL_TRUE, 0, N * Sizeof.cl_long, Pointer.to(output), 0, null, null);
+    private void debug(String text, cl_command_queue commandQueue) {
+        clEnqueueReadBuffer(commandQueue, outputBuffer, CL_TRUE, 0, N * Sizeof.cl_long, Pointer.to(output), 0, null, null);
         System.out.println("Input: " + text + Arrays.toString(input));
         System.out.println("Output: " + text + Arrays.toString(output));
     }
 
-    private void executeScanKernel(cl_command_queue commandQueue, cl_kernel kernel, cl_mem[] memObjects, long workGroupCount, int useSums) {
-        clSetKernelArg(kernel, 0, Sizeof.cl_mem, Pointer.to(memObjects[INPUT_DATA]));
-        clSetKernelArg(kernel, 1, Sizeof.cl_mem, Pointer.to(memObjects[OUTPUT_DATA]));
-        clSetKernelArg(kernel, 2, Sizeof.cl_int, Pointer.to(new int[]{(int) N}));
-        clSetKernelArg(kernel, 3, WORKITEM_SIZE / 2 * Sizeof.cl_int, null);
+    private void executeScanKernel(cl_command_queue commandQueue, cl_kernel kernel, long workGroupCount, int useSums) {
+        clSetKernelArg(kernel, 0, Sizeof.cl_mem, Pointer.to(inputBuffer));
+        clSetKernelArg(kernel, 1, Sizeof.cl_mem, Pointer.to(outputBuffer));
+        clSetKernelArg(kernel, 2, Sizeof.cl_int, Pointer.to(new int[]{(int) workGroupCount}));
+        clSetKernelArg(kernel, 3, WORKITEM_SIZE * 2 * Sizeof.cl_int, null);
         if (useSums == USE_TEMP) {
             clSetKernelArg(kernel, 4, Sizeof.cl_mem, Pointer.to(new cl_mem[getWorkGroupCount() + 1]));
         } else {
-            clSetKernelArg(kernel, 4, Sizeof.cl_mem, Pointer.to(memObjects[useSums]));
+            clSetKernelArg(kernel, 4, Sizeof.cl_mem, Pointer.to(useSums == SCANNED_SUM ? scanSumBuffer : sumBuffer));
         }
         // zusätzlicher output array, der das letzte element jedes scans speichert => pro workgroup wieder aufsummiert
         // dafür nochmal einen eigenen kernel
@@ -134,25 +128,23 @@ public class Assignment2 {
         // Set the work-item dimensions
         // Execute the kernel
         clEnqueueNDRangeKernel(commandQueue, kernel, 1, null,
-                new long[]{workGroupCount / 2},
+                new long[]{workGroupCount},
                 new long[]{WORKITEM_SIZE > workGroupCount ?  workGroupCount / 2 : WORKITEM_SIZE / 2},
                 0, null, null);
     }
 
-    private cl_mem[] getClMemoryBuffers(cl_context context) {
-        cl_mem memObjects[] = new cl_mem[5];
-        memObjects[INPUT_DATA] = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Sizeof.cl_long * N, Pointer.to(input), null);
-        memObjects[OUTPUT_DATA] = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, Sizeof.cl_long * N, Pointer.to(output), null);
-        memObjects[TEMPORARY_DATA] = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_long * N * 2, Pointer.to(temp), null);
-        memObjects[SUM] = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_long * (getWorkGroupCount() + 1), Pointer.to(sums), null);
-        memObjects[SCANNED_SUM] = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_long * (getWorkGroupCount() + 1), Pointer.to(sums), null);
-        return memObjects;
+    private void getClMemoryBuffers(cl_context context) {
+        inputBuffer = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Sizeof.cl_long * N, Pointer.to(input), null);
+        outputBuffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, Sizeof.cl_long * N, Pointer.to(output), null);
+        tempBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_long * N * 2, Pointer.to(temp), null);
+        sumBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_long * (getWorkGroupCount() + 1), Pointer.to(sums), null);
+        scanSumBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_long * (getWorkGroupCount() + 1), Pointer.to(sums), null);
     }
 
-    private void clean(cl_context context, cl_command_queue commandQueue, cl_program program, cl_kernel kernel, cl_mem[] memObjects) {
+    private void clean(cl_context context, cl_command_queue commandQueue, cl_program program, cl_kernel kernel) {
         // Release kernel, program, and memory objects
-        clReleaseMemObject(memObjects[INPUT_DATA]);
-        clReleaseMemObject(memObjects[OUTPUT_DATA]);
+        clReleaseMemObject(inputBuffer);
+        clReleaseMemObject(outputBuffer);
         clReleaseKernel(kernel);
         clReleaseProgram(program);
         clReleaseCommandQueue(commandQueue);

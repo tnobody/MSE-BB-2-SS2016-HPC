@@ -23,56 +23,6 @@ __kernel void scan(__global int* input, __global int* output, int n, __local int
      output[globalId] = temp[pout*n+globalId];
 }
 
-/**
- * The Work efficient algorithm for Arrays with the right size (power of 2)
- */
-__kernel void scan_work_efficient_v1(__global int* input, __global int* output, int n, __local int* temp) {
-     int localId = get_local_id(0);
-     int offset = 1;
-
-     // load input into shared memory
-     temp[2*localId] = input[2*localId];
-     temp[2*localId + 1] = input[2*localId + 1];
-
-     // Build the sum in place up the tree
-     for (int d = n>>1; d > 0; d >>=1) { 
-          barrier(CLK_LOCAL_MEM_FENCE);
-          if (localId < d) {
-               int ai = offset * (2 * localId + 1) - 1;
-               int bi = offset * (2 * localId + 2) - 1;
-
-               temp[bi] += temp[ai];
-          }
-          offset *= 2;
-     }
-
-     // Clear the last element
-     if (localId == 0) {
-          temp[n - 1] = 0;
-     }
-
-     // traverse down tree & build scan
-     for (int d = 1; d < n; d *= 2) {
-          offset >>= 1;
-          barrier(CLK_LOCAL_MEM_FENCE);
-
-          if (localId < d) {
-               int ai = offset * (2 * localId + 1) - 1;
-               int bi = offset * (2 * localId + 2) - 1;
-
-               int t = temp[ai];
-               temp[ai] = temp[bi];
-               temp[bi] += t;
-          }
-     }
-
-     barrier(CLK_LOCAL_MEM_FENCE);
-
-     // write the results back to device memory
-     output[2 * localId] = temp[2*localId];
-     output[2 * localId + 1] = temp[2*localId + 1];
-}
-
 __kernel void scan_work_efficient(
     __global int* input,
     __global int* output,
@@ -112,7 +62,6 @@ __kernel void scan_work_efficient(
      for (int d = 1; d < n; d *= 2) {
           offset >>= 1;
           barrier(CLK_LOCAL_MEM_FENCE);
-
           if (localId < d) {
                int ai = offset * (2 * localId + 1) - 1;
                int bi = offset * (2 * localId + 2) - 1;
