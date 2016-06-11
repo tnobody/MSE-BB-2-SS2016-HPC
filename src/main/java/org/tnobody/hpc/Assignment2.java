@@ -32,7 +32,7 @@ public class Assignment2 {
     private cl_mem scanSumBuffer;
 
 
-    private Assignment2() throws IOException {
+    public Assignment2() throws IOException {
 
         // Read the programSource from a file
         programSource = FileUtils.readLines(new File(Assignment2.class.getResource(".").getPath() + KERNEL_FILE)).stream().collect(Collectors.joining(System.getProperty("line.separator")));
@@ -64,7 +64,7 @@ public class Assignment2 {
         //System.out.println("With Java" + out);
     }
 
-    private void oclScan(int workItemSize, int[]input, int[]output, int[]sum) {
+    public void oclScan(int workItemSize, int[]input, int[]output, int[]sum) {
 
         int globalWorkSize = input.length;
         int workGroupCount = (globalWorkSize + workItemSize - 1) / workItemSize;
