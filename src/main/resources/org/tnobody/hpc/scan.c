@@ -1,5 +1,5 @@
 /**
- * Default naive implementation
+ * Scan - Naive implementation
 **/
 __kernel void scan(__global int* input, __global int* output, int n, __local int* temp) {
      int globalId = get_global_id(0);
@@ -23,6 +23,10 @@ __kernel void scan(__global int* input, __global int* output, int n, __local int
      output[globalId] = temp[pout*n+globalId];
 }
 
+
+/**
+ * Scan Work Efficient
+**/
 __kernel void scan_work_efficient(
     __global int* input,
     __global int* output,
@@ -40,7 +44,7 @@ __kernel void scan_work_efficient(
      temp[2*localId + 1] = input[2*localId + 1];
 
      // Build the sum in place up the tree
-     for (int d = n>>1; d > 0; d >>=1) { 
+     for (int d = n>>1; d > 0; d >>=1) {
           barrier(CLK_LOCAL_MEM_FENCE);
 
           if (localId < d) {
@@ -78,6 +82,10 @@ __kernel void scan_work_efficient(
      output[2 * globalId + 1] = temp[2*localId + 1];
 }
 
+
+/**
+ * Scan Add
+**/
 __kernel void add(__global int* input, __global int* output) {
      int globalId = get_global_id(0);
      int localId = get_local_id(0);
@@ -93,3 +101,6 @@ __kernel void add(__global int* input, __global int* output) {
      output[2 * globalId] += value[0];
      output[2 * globalId + 1] += value[0];
 }
+
+
+
