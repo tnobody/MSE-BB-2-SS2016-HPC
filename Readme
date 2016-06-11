@@ -8,14 +8,26 @@ ________________________________________________________________________________
 Informationen für die Assigments:
 
 Assignment 1:
-- Es wird für alle 10° ein Bild erstellt und im Ordner '...target\classes\org\tnobody\hpc\rotated\' abgespeichert
+- Es kann ein Bild ausgewählt werden, welches danach 36 Mal (in 10°-Schritten) abgespeichert wird.
+- Die Bild werden in folgenden Ordner gespeichert: '...target\classes\org\tnobody\hpc\rotated\'
 ________________________________________________________________________________________________________________________
 
 Assignment 2:
+- Die Vorgehensweise bei diesem Beispiel war wie folgt:
+    - Implementierung Naive Parallel Scan
+    - Implementierung Work-Efficient Parallel Scan
+
 - Bei größeren Zahlen muss die 'JavaScan'-Methode auskommentiert werden. Ansonsten erhält man einen 'java.lang.StackOverflowError'-Fehler
     - Zum Beispiel:
         - Assignment2 - Zeile 41: Math.pow(2, 15)];
-        - Assignment2 - Zeile 63: //List<Long> out = JavaScan.scan((a,b) -> ...
+        - Assignment2 - Zeile 64: //List<Long> out = JavaScan.scan((a,b) -> ...
+
+- Die maximale Anzahl mit der wir testen konnten ist 'Math.pow(2, 26);' ==> Entspricht einem Wert von '67.108.864'
 ________________________________________________________________________________________________________________________
 
 Assignment 3:
+- Es wurde der 'Stream Compaction' implementiert
+- Folgende Mathematische Funktionen wurden angewendet:
+    - Mod 2 (Alle geraden Zahlen)
+    -
+    -

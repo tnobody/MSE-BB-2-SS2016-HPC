@@ -38,7 +38,8 @@ public class Assignment2 {
         programSource = FileUtils.readLines(new File(Assignment2.class.getResource(".").getPath() + KERNEL_FILE)).stream().collect(Collectors.joining(System.getProperty("line.separator")));
 
         // Create input- and output data
-        int input[] = new int[(int) Math.pow(2, 10)];
+        int input[] = new int[(int) Math.pow(2, 26)];
+
         Arrays.fill(input, 1);
 
         int output[] = new int[input.length];
@@ -60,7 +61,7 @@ public class Assignment2 {
     }
 
     private void javaScan(int[] input) {
-        List<Long> out = JavaScan.scan((a,b) -> a+b, 0L, Arrays.stream(input).boxed().collect(Collectors.toList()));
+        //List<Long> out = JavaScan.scan((a,b) -> a+b, 0L, Arrays.stream(input).boxed().collect(Collectors.toList()));
         //System.out.println("With Java" + out);
     }
 
@@ -114,7 +115,7 @@ public class Assignment2 {
             executeAddKernel(commandQueue, addKernel, globalWorkSize, workItemSize, sumBuffer, outputBuffer);
         }
 
-//        debug("After all", commandQueue, outputBuffer, input, output);
+        //debug("After all", commandQueue, outputBuffer, input, output);
 
         clEnqueueReadBuffer(commandQueue, outputBuffer, CL_TRUE, 0, input.length * Sizeof.cl_int, Pointer.to(output), 0, null, null);
         clean(context, commandQueue, program, scanKernel);

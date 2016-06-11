@@ -1,0 +1,19 @@
+
+NVIDIA
+- http://http.developer.nvidia.com/GPUGems3/gpugems3_ch39.html
+- https://devtalk.nvidia.com/default/topic/881932/bugged-code-in-website/
+
+KHRONOS
+- https://www.khronos.org/registry/cl/sdk/1.2/docs/man/xhtml/otherDataTypes.html
+- https://www.khronos.org/registry/cl/sdk/1.0/docs/man/xhtml/read_imagei2d.html
+- https://www.khronos.org/registry/cl/sdk/1.0/docs/man/xhtml/get_image_width.html
+- uvw
+
+JOCL
+- http://www.jocl.org/samples/samples.html
+
+APACHE
+- https://commons.apache.org/proper/commons-io/javadocs/api-1.4/org/apache/commons/io/FileUtils.html
+
+ORACLE
+- https://docs.oracle.com/javase/7/docs/api/java/awt/image/BufferedImage.html
