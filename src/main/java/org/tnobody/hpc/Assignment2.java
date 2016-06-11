@@ -38,12 +38,11 @@ public class Assignment2 {
         programSource = FileUtils.readLines(new File(Assignment2.class.getResource(".").getPath() + KERNEL_FILE)).stream().collect(Collectors.joining(System.getProperty("line.separator")));
 
         // Create input- and output data
-        int input[] = new int[(int) Math.pow(2, 15)];
+        int input[] = new int[(int) Math.pow(2, 10)];
         Arrays.fill(input, 1);
 
         int output[] = new int[input.length];
         int sum[] = new int[2];
-
 
         int workItemSize = 512;
 
@@ -61,7 +60,7 @@ public class Assignment2 {
     }
 
     private void javaScan(int[] input) {
-        //List<Long> out = JavaScan.scan((a,b) -> a+b, 0L, Arrays.stream(input).boxed().collect(Collectors.toList()));
+        List<Long> out = JavaScan.scan((a,b) -> a+b, 0L, Arrays.stream(input).boxed().collect(Collectors.toList()));
         //System.out.println("With Java" + out);
     }
 
@@ -70,18 +69,12 @@ public class Assignment2 {
         int globalWorkSize = input.length;
         int workGroupCount = (globalWorkSize + workItemSize - 1) / workItemSize;
 
-        final int platformIndex = 0;
         final long deviceType = CL_DEVICE_TYPE_ALL;
-        final int deviceIndex = 0;
 
         CL.setExceptionsEnabled(true);
 
         int numPlatformArray[] = new int[1];
         clGetPlatformIDs(0, null, numPlatformArray);
-
-        int numPlatforms = numPlatformArray[0];
-
-
 
         cl_platform_id platform = getClPlatformId();
         cl_device_id device = getClDeviceId(platform);
@@ -108,32 +101,20 @@ public class Assignment2 {
         // Allocate the memory objects for the input- and output data
         getClMemoryBuffers(context, input, output, sum, workGroupCount);
 
-
-//        startTime = System.nanoTime();
-
         executeScanKernel(commandQueue, scanKernel, globalWorkSize, workItemSize, inputBuffer, outputBuffer, sumBuffer);
-//        System.out.println("AfterScanKernel 1 - StartTime " + startTime);
-//        debug("After first", commandQueue, outputBuffer, src, dst);
 
         if (workGroupCount > 1) {
 
             executeScanKernel(commandQueue, scanKernel, workGroupCount, workItemSize, sumBuffer, sumBuffer, scanSumBuffer);
-//            debug("After second ", commandQueue, outputBuffer, src, dst);
-            System.out.println(commandQueue);
 
             if (workGroupCount > workItemSize) {
                 executeScanKernel(commandQueue, scanKernel, workGroupCount, workItemSize, scanSumBuffer, scanSumBuffer, null);
-//                debug("After third ", commandQueue, outputBuffer, src, dst);
-                System.out.println(commandQueue);
-
                 executeAddKernel(commandQueue, addKernel, globalWorkSize, workItemSize, scanSumBuffer, sumBuffer);
             }
-
             executeAddKernel(commandQueue, addKernel, globalWorkSize, workItemSize, sumBuffer, outputBuffer);
-//            debug("After add  ", commandQueue);
         }
 
-        debug("After all", commandQueue, outputBuffer, input, output);
+//        debug("After all", commandQueue, outputBuffer, input, output);
 
         clEnqueueReadBuffer(commandQueue, outputBuffer, CL_TRUE, 0, input.length * Sizeof.cl_int, Pointer.to(output), 0, null, null);
         clean(context, commandQueue, program, scanKernel);
@@ -150,8 +131,6 @@ public class Assignment2 {
         int localGroupCount = workGroupCount / 2;
         int localWorkItemSize = workItemSize > workGroupCount ? workGroupCount / 2 : workItemSize / 2;
 
-        cl_mem tempMemObjects[] = new cl_mem[workGroupCount + 1];
-
         clSetKernelArg(kernel, 0, Sizeof.cl_mem, Pointer.to(inputBuffer));
         clSetKernelArg(kernel, 1, Sizeof.cl_mem, Pointer.to(outputBuffer));
         clSetKernelArg(kernel, 2, Sizeof.cl_int, Pointer.to(new int[]{(int) workItemSize}));
@@ -163,10 +142,8 @@ public class Assignment2 {
             clSetKernelArg(kernel, 4, Sizeof.cl_mem, Pointer.to(sumBuffer));
         }
 
-
         // zusätzlicher output array, der das letzte element jedes scans speichert => pro workgroup wieder aufsummiert
         // dafür nochmal einen eigenen kernel
-
         clEnqueueNDRangeKernel(
                 commandQueue,
                 kernel,
@@ -207,7 +184,6 @@ public class Assignment2 {
 
     private cl_command_queue getClCommandQueue(cl_device_id device, cl_context context) {
         // Create a command-queue for the selected device
-        cl_queue_properties queueProperties = new cl_queue_properties();
         return clCreateCommandQueue(context, device, 0, null);
     }
 
@@ -248,14 +224,6 @@ public class Assignment2 {
         return platforms[PLATFORM_INDEX];
     }
 
-    public static void main(String args[]) {
-        try {
-            new Assignment2();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void clean(cl_context context, cl_command_queue commandQueue, cl_program program, cl_kernel kernel) {
         // Release kernel, program, and memory objects
         clReleaseMemObject(inputBuffer);
@@ -264,5 +232,14 @@ public class Assignment2 {
         clReleaseProgram(program);
         clReleaseCommandQueue(commandQueue);
         clReleaseContext(context);
+    }
+
+
+    public static void main(String args[]) {
+        try {
+            new Assignment2();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

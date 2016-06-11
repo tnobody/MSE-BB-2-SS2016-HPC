@@ -1,5 +1,6 @@
 package org.tnobody.hpc;
 
+import org.apache.commons.io.FileUtils;
 import org.jocl.Pointer;
 import org.jocl.Sizeof;
 import org.jocl.cl_mem;
@@ -11,6 +12,7 @@ import java.awt.image.DataBufferInt;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.jocl.CL.clEnqueueNDRangeKernel;
@@ -22,52 +24,20 @@ import static org.jocl.CL.clSetKernelArg;
  */
 public class Assignment1 {
 
-    private static final String programSource =
-            "" + "\n" +
-                    "const sampler_t samplerIn = " + "\n" +
-                    "    CLK_NORMALIZED_COORDS_FALSE | " + "\n" +
-                    "    CLK_ADDRESS_CLAMP |" + "\n" +
-                    "    CLK_FILTER_NEAREST;" + "\n" +
-                    "" + "\n" +
-                    "const sampler_t samplerOut = " + "\n" +
-                    "    CLK_NORMALIZED_COORDS_FALSE |" + "\n" +
-                    "    CLK_ADDRESS_CLAMP |" + "\n" +
-                    "    CLK_FILTER_NEAREST;" + "\n" +
-                    "" + "\n" +
-                    "__kernel void rotateImage(" + "\n" +
-                    "    __read_only  image2d_t sourceImage, " + "\n" +
-                    "    __write_only image2d_t targetImage, " + "\n" +
-                    "    float angle)" + "\n" +
-                    "{" + "\n" +
-                    "    int gidX = get_global_id(0);" + "\n" +
-                    "    int gidY = get_global_id(1);" + "\n" +
-                    "    int w = get_image_width(sourceImage);" + "\n" +
-                    "    int h = get_image_height(sourceImage);" + "\n" +
-                    "    int cx = w/2;" + "\n" +
-                    "    int cy = h/2;" + "\n" +
-                    "    int dx = gidX-cx;" + "\n" +
-                    "    int dy = gidY-cy;" + "\n" +
-                    "    float ca = cos(angle);" + "\n" +
-                    "    float sa = sin(angle);" + "\n" +
-                    "    int inX = (int)(cx+ca*dx-sa*dy);" + "\n" +
-                    "    int inY = (int)(cy+sa*dx+ca*dy);" + "\n" +
-                    "    inX = (int)(((cos(angle)*dx) - (sin(angle)*dy)) + cx);" + "\n" +
-                    "    inY = (int)(((sin(angle)*dx) + (cos(angle)*dy)) + cy);" + "\n" +
-                    "    int2 posIn = {inX, inY};" + "\n" +
-                    "    int2 posOut = {gidX, gidY};" + "\n" +
-                    "    uint4 pixel = read_imageui(sourceImage, samplerIn, posIn);" + "\n" +
-                    "    write_imageui(targetImage, posOut, pixel);" + "\n" +
-                    "}";
+    final String KERNEL_FILE = "/RotateImage.c";
 
     private OpenCLContext openCLContext;
     private cl_mem inputImageMem;
     private cl_mem outputImageMem;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         new Assignment1();
     }
 
-    public Assignment1() {
+    public Assignment1() throws IOException {
+
+        String programSource = FileUtils.readLines(new File(Assignment2.class.getResource(".").getPath() + KERNEL_FILE)).stream().collect(Collectors.joining(System.getProperty("line.separator")));
+
         BufferedImage image = createBufferedImage("homer.png");
         try {
             try {
@@ -104,35 +74,44 @@ public class Assignment1 {
         clSetKernelArg(openCLContext.getKernel(), 0, Sizeof.cl_mem, Pointer.to(inputImageMem));
         clSetKernelArg(openCLContext.getKernel(), 1, Sizeof.cl_mem, Pointer.to(outputImageMem));
         clSetKernelArg(openCLContext.getKernel(), 2, Sizeof.cl_float, Pointer.to(new float[]{angle}));
-        clEnqueueNDRangeKernel(openCLContext.getCommandQueue(), openCLContext.getKernel(), 2, null,
-                globalWorkSize, null, 0, null, null);
+        clEnqueueNDRangeKernel(openCLContext.getCommandQueue(), openCLContext.getKernel(), 2, null, globalWorkSize, null, 0, null, null);
 
         // Read the pixel data into the output image
-        BufferedImage outputImage = new BufferedImage(
-                imageSizeX, imageSizeY, BufferedImage.TYPE_INT_RGB);
-        DataBufferInt dataBufferDst =
-                (DataBufferInt) outputImage.getRaster().getDataBuffer();
+        BufferedImage outputImage = new BufferedImage(imageSizeX, imageSizeY, BufferedImage.TYPE_INT_RGB);
+        DataBufferInt dataBufferDst = (DataBufferInt) outputImage.getRaster().getDataBuffer();
         int dataDst[] = dataBufferDst.getData();
+
         clEnqueueReadImage(
-                openCLContext.getCommandQueue(), outputImageMem, true, new long[3],
+                openCLContext.getCommandQueue(),
+                outputImageMem,
+                true,
+                new long[3],
                 new long[]{imageSizeX, imageSizeY, 1},
-                imageSizeX * Sizeof.cl_uint, 0,
-                Pointer.to(dataDst), 0, null, null);
+                imageSizeX * Sizeof.cl_uint,
+                0,
+                Pointer.to(dataDst),
+                0,
+                null,
+                null);
 
         return outputImage;
     }
 
     private BufferedImage createBufferedImage(String imageName) {
+
         BufferedImage image = null;
+
         try {
             image = ImageIO.read(getClass().getResource(imageName));
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         BufferedImage rimage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
         Graphics g = rimage.createGraphics();
-        g.drawImage(image,0,0,null);
+        g.drawImage(image, 0, 0, null);
         g.dispose();
+
         return rimage;
     }
 

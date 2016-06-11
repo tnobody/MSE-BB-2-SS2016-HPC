@@ -1,0 +1,21 @@
+
+Team:
+- HÖRMANN Daniel - se15m016
+- KEINER Tim - se15m036
+- SCHOTT Daniel - se15m013
+________________________________________________________________________________________________________________________
+
+Informationen für die Assigments:
+
+Assignment 1:
+- Es wird für alle 10° ein Bild erstellt und im Ordner '...target\classes\org\tnobody\hpc\rotated\' abgespeichert
+________________________________________________________________________________________________________________________
+
+Assignment 2:
+- Bei größeren Zahlen muss die 'JavaScan'-Methode auskommentiert werden. Ansonsten erhält man einen 'java.lang.StackOverflowError'-Fehler
+    - Zum Beispiel:
+        - Assignment2 - Zeile 41: Math.pow(2, 15)];
+        - Assignment2 - Zeile 63: //List<Long> out = JavaScan.scan((a,b) -> ...
+________________________________________________________________________________________________________________________
+
+Assignment 3:
