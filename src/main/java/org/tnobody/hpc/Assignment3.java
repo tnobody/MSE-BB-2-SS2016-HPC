@@ -19,8 +19,11 @@ public class Assignment3 {
 
     Assignment2 scan = new Assignment2();
 
+    final String KERNEL_METHOD = "scatter";
 
-    final String FILTER_PREDICATE_KERNEL_METHOD = "isEven";
+//    final String FILTER_PREDICATE_KERNEL_METHOD = "isEven";
+//    final String FILTER_PREDICATE_KERNEL_METHOD = "isOdd";
+    final String FILTER_PREDICATE_KERNEL_METHOD = "isLowerThen1000";
 
     final int PLATFORM_INDEX = 0;
     final long DEVICE_TYPE = CL_DEVICE_TYPE_GPU;
@@ -34,7 +37,6 @@ public class Assignment3 {
         String programSource = readProgramSource("/stream_compaction.c");
 
         // Create input- and output data
-        //int input[] = new int[(int) Math.pow(2, 10)];
         final AtomicInteger c = new AtomicInteger();
         int input[] = Arrays.stream(new int[(int) Math.pow(2, 15)]).map((i) -> c.getAndIncrement()).toArray();
 
@@ -69,7 +71,7 @@ public class Assignment3 {
 
         cl_program program = clCreateProgramWithSource(context, 1, new String[]{ programSource }, null, null);
         clBuildProgram(program, 0, null, null, null, null);
-        cl_kernel filterKernel = clCreateKernel(program, "filter", null);
+        cl_kernel filterKernel = clCreateKernel(program, FILTER_PREDICATE_KERNEL_METHOD, null);
 
         inputBuffer = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Sizeof.cl_int * input.length, Pointer.to(input), null);
         filterResultBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, Sizeof.cl_int * input.length, Pointer.to(filterResults), null);
@@ -91,13 +93,13 @@ public class Assignment3 {
         clEnqueueReadBuffer(commandQueue, filterResultBuffer, CL_TRUE, 0, input.length * Sizeof.cl_int, Pointer.to(filterResults), 0, null, null);
 
         System.out.println("Input: " + Arrays.toString(input));
-        System.out.println("Filterresults: " + Arrays.toString(filterResults));
+        //System.out.println("Filterresults: " + Arrays.toString(filterResults));
 
         scan.oclScan(workItemSize, filterResults, scannedfilterResults, new int[2]);
 
-        System.out.println("Scanned Filters: " + Arrays.toString(scannedfilterResults));
+        //System.out.println("Scanned Filters: " + Arrays.toString(scannedfilterResults));
 
-        cl_kernel scatterKernel = clCreateKernel(program, "scatter", null);
+        cl_kernel scatterKernel = clCreateKernel(program, KERNEL_METHOD, null);
 
         output = new int[scannedfilterResults[scannedfilterResults.length-1]];
         scannedfilterResultsBuffer = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Sizeof.cl_int * scannedfilterResults.length, Pointer.to(scannedfilterResults), null);

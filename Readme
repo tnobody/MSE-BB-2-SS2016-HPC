@@ -27,7 +27,13 @@ ________________________________________________________________________________
 
 Assignment 3:
 - Es wurde der 'Stream Compaction' implementiert
+
 - Folgende Mathematische Funktionen wurden angewendet:
-    - Mod 2 (Alle geraden Zahlen)
-    -
-    -
+    - isEven (alle geraden Zahlen)
+    - isOdd (alle ungeraden Zahlen)
+    - isLowerThen1000 (alle Zahlen die kleiner als 1000 sind)
+
+- Um die drei verschiedenen Besipiele testen zu können müssen die folgenden Zeilen ein/auskommentiert werden
+    - Assignment 3 - Zeile 24: final String FILTER_PREDICATE_KERNEL_METHOD = "isEven";
+    - Assignment 3 - Zeile 25: final String FILTER_PREDICATE_KERNEL_METHOD = "isOdd";
+    - Assignment 3 - Zeile 26: final String FILTER_PREDICATE_KERNEL_METHOD = "isLowerThen1000";
